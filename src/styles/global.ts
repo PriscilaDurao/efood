@@ -1,12 +1,5 @@
 import { createGlobalStyle } from "styled-components";
 
-export const colors = {
-  bege: "#FFF8F2",
-  rosa: "#E66767",
-  branca: "#FFFFFF",
-  begeClaro: "#FFEBD9",
-};
-
 export const GlobalStyle = createGlobalStyle`
   * {
     margin: 0;
@@ -18,7 +11,17 @@ export const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    background-color: ${colors.bege};
-    color: ${colors.rosa};
+    background-color: ${(props) => props.theme.colors.background};
+    color: ${(props) => props.theme.colors.text};
+  }
+
+  .container {
+    max-width: 1024px;
+    width: 100%;
+    margin: 0 auto;
+
+    @media (max-width: 1024px) {
+      width: 90%;
+    }
   }
 `;
