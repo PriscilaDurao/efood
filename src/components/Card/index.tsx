@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   CardContainer,
   CardImage,
@@ -12,6 +13,7 @@ import {
 import star from "../../assets/icons/star.svg";
 
 type Props = {
+  id: number;
   title: string;
   rating: number;
   description: string;
@@ -20,6 +22,7 @@ type Props = {
 };
 
 export const Card: React.FC<Props> = ({
+  id,
   title,
   rating,
   description,
@@ -42,7 +45,9 @@ export const Card: React.FC<Props> = ({
         </div>
       </HeaderCard>
       <Description>{description}</Description>
-      <Button>Saiba mais</Button>
+      <Link to={`/perfil/${id}`}>
+        <Button>Saiba mais</Button>
+      </Link>
     </Content>
   </CardContainer>
 );
