@@ -1,7 +1,7 @@
 import styled from "styled-components";
 
 export const CardContainer = styled.div`
-  background-color: ${(props) => props.theme.colors.white};
+  background-color: #ffffff;
   border: 1px solid ${(props) => props.theme.colors.primary};
   position: relative;
   display: flex;
@@ -28,7 +28,6 @@ export const Tag = styled.span`
   font-size: 12px;
   font-weight: bold;
   padding: 6px 10px;
-  display: inline-block;
 `;
 
 export const Content = styled.div`
@@ -36,45 +35,38 @@ export const Content = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
-  justify-content: space-between;
 `;
 
 export const HeaderCard = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: ${(props) => props.theme.colors.primary};
+  font-weight: bold;
+  font-size: 18px;
   margin-bottom: 16px;
-
-  h3 {
-    font-size: 18px;
-    font-weight: bold;
-    color: ${(props) => props.theme.colors.primary};
-  }
 
   div {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: bold;
-    font-size: 18px;
-    color: ${(props) => props.theme.colors.primary};
   }
 `;
 
 export const Description = styled.p`
+  color: ${(props) => props.theme.colors.primary};
   font-size: 14px;
   line-height: 22px;
   margin-bottom: 16px;
-  color: ${(props) => props.theme.colors.primary};
+  flex: 1;
 `;
 
-export const Button = styled.button`
+export const Button = styled.span`
   background-color: ${(props) => props.theme.colors.primary};
   color: ${(props) => props.theme.colors.secondary};
-  border: none;
-  padding: 4px 6px;
   font-size: 14px;
   font-weight: bold;
-  cursor: pointer;
-  align-self: flex-start;
+  padding: 4px 6px;
+  display: inline-block;
+  text-decoration: none;
 `;

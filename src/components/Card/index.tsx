@@ -16,23 +16,23 @@ type Props = {
   id: number;
   title: string;
   rating: number;
+  infos: string[];
   description: string;
   image: string;
-  infos?: string[];
 };
 
 export const Card: React.FC<Props> = ({
   id,
   title,
   rating,
+  infos,
   description,
   image,
-  infos,
 }) => (
   <CardContainer>
     <CardImage src={image} alt={title} />
     <TagContainer>
-      {infos?.map((info) => (
+      {infos.map((info) => (
         <Tag key={info}>{info}</Tag>
       ))}
     </TagContainer>
@@ -41,7 +41,7 @@ export const Card: React.FC<Props> = ({
         <h3>{title}</h3>
         <div>
           <span>{rating}</span>
-          <img src={star} alt="Estrela de avaliação" />
+          <img src={star} alt="Estrela" />
         </div>
       </HeaderCard>
       <Description>{description}</Description>
