@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
 import { MenuItem } from "../../types";
+import { add, open } from "../../store/reducers/cart";
 import {
   CardContainer,
   Title,
@@ -16,11 +18,18 @@ type Props = {
 
 export const ProductCard: React.FC<Props> = ({ item }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const dispatch = useDispatch();
 
   const formattedPrice = item.preco.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
+
+  const handleAddToCart = () => {
+    dispatch(add(item));
+    dispatch(open());
+    setModalOpen(false);
+  };
 
   return (
     <>
@@ -33,7 +42,7 @@ export const ProductCard: React.FC<Props> = ({ item }) => {
             : item.descricao}
         </Description>
         <AddButton type="button" onClick={() => setModalOpen(true)}>
-          Adicionar ao carrinho
+          Mais detalhes
         </AddButton>
       </CardContainer>
 
@@ -55,7 +64,7 @@ export const ProductCard: React.FC<Props> = ({ item }) => {
                 <p>{item.descricao}</p>
                 <p>Serve: {item.porcao}</p>
               </div>
-              <button type="button" onClick={() => setModalOpen(false)}>
+              <button type="button" onClick={handleAddToCart}>
                 Adicionar ao carrinho - {formattedPrice}
               </button>
             </ModalDetails>

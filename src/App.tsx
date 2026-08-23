@@ -1,19 +1,23 @@
 import React from "react";
+import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
-import { GlobalStyle } from "./styles/global";
-import { theme } from "./styles/theme";
+import { store } from "./store";
 import { AppRoutes } from "./routes";
+import { Cart } from "./components/Cart";
+import theme from "./styles/theme";
+import { GlobalCss } from "./styles/global";
 
-function App() {
-  return (
+export const App: React.FC = () => (
+  <Provider store={store}>
     <ThemeProvider theme={theme}>
+      <GlobalCss />
       <BrowserRouter>
-        <GlobalStyle />
         <AppRoutes />
+        <Cart />
       </BrowserRouter>
     </ThemeProvider>
-  );
-}
+  </Provider>
+);
 
 export default App;
