@@ -22,12 +22,12 @@ export const CartContainer = styled.aside`
   padding: 32px 16px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 
   ul {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    overflow-y: auto;
   }
 `;
 
@@ -77,7 +77,7 @@ export const TotalContainer = styled.div`
   margin-bottom: 16px;
 `;
 
-export const CheckoutButton = styled.button`
+export const Button = styled.button`
   background-color: #ffebd9;
   color: #e66767;
   border: none;
@@ -86,4 +86,59 @@ export const CheckoutButton = styled.button`
   font-weight: bold;
   font-size: 14px;
   cursor: pointer;
+  margin-bottom: 8px;
+`;
+
+export const FormTitle = styled.h3`
+  color: #ffebd9;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 16px;
+`;
+
+export const Row = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+export const InputGroup = styled.div<{ maxWidth?: string }>`
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  flex: 1;
+  max-width: ${(props) => props.maxWidth || "auto"};
+
+  label {
+    color: #ffebd9;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
+  input {
+    background-color: #ffebd9;
+    border: 1px solid #ffebd9;
+    height: 32px;
+    padding: 0 8px;
+    color: #4b4b4b;
+    font-weight: bold;
+    font-size: 14px;
+    width: 100%;
+  }
+`;
+
+export const ConfirmationContainer = styled.div`
+  color: #ffebd9;
+
+  h3 {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 14px;
+    line-height: 22px;
+    margin-bottom: 16px;
+  }
 `;
