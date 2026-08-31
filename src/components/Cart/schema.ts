@@ -10,7 +10,13 @@ export const checkoutSchema = Yup.object().shape({
     .min(5, "Endereço muito curto")
     .required("O endereço é obrigatório"),
 
-  city: Yup.string().required("A cidade é obrigatória"),
+  city: Yup.string()
+    .min(3, "A cidade deve ter pelo menos 3 caracteres")
+    .matches(
+      /^[a-zA-A-Za-zÀ-ÖØ-öø-ÿ\s]+$/,
+      "A cidade deve conter apenas letras",
+    )
+    .required("O campo é obrigatório"),
 
   zipCode: Yup.string()
     .matches(/^\d{5}-\d{3}$/, "CEP inválido. Use o formato: 00000-000")
