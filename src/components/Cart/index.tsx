@@ -20,7 +20,7 @@ import {
 
 type Step = "cart" | "delivery" | "payment" | "confirmation";
 
-// Esquema de Validação Yup
+// 1. ESQUEMA DE VALIDAÇÃO COM YUP
 const checkoutSchema = Yup.object({
   // Entrega
   receiver: Yup.string()
@@ -29,7 +29,10 @@ const checkoutSchema = Yup.object({
   address: Yup.string()
     .min(5, "Endereço muito curto")
     .required("O campo é obrigatório"),
-  city: Yup.string().required("O campo é obrigatório"),
+  city: Yup.string()
+    .min(3, "Digite o nome completo da cidade")
+    .matches(/^[a-zA-ZÀ-ÿ\s]+$/, "A cidade deve conter apenas letras")
+    .required("O campo é obrigatório"),
   zipCode: Yup.string()
     .matches(/^\d{5}-\d{3}$/, "Formato inválido (00000-000)")
     .required("O campo é obrigatório"),
@@ -61,7 +64,7 @@ export const Cart: React.FC = () => {
   const { isOpen, items } = useSelector((state: RootState) => state.cart);
   const dispatch = useDispatch();
 
-  // Configuração única do Formik gerenciando todo o fluxo de formulário
+  // 2. CONFIGURAÇÃO DO FORMIK
   const form = useFormik({
     initialValues: {
       receiver: "",
@@ -131,14 +134,13 @@ export const Cart: React.FC = () => {
     form.resetForm();
   };
 
-  // Função para verificar se o campo tem erro e já foi tocado
+  // Funções de verificação e máscaras
   const checkInputHasError = (fieldName: keyof typeof form.values) => {
     const isTouched = form.touched[fieldName];
     const isInvalid = form.errors[fieldName];
     return Boolean(isTouched && isInvalid);
   };
 
-  // Funções para formatar e aplicar máscaras nos inputs
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 5) {
@@ -162,7 +164,7 @@ export const Cart: React.FC = () => {
     form.setFieldValue(fieldName, value.slice(0, maxLength));
   };
 
-  // Validação manual da etapa de Entrega antes de avançar para Pagamento
+  // Validação ao tentar avançar de etapa
   const handleGoToPayment = async () => {
     form.setFieldTouched("receiver", true);
     form.setFieldTouched("address", true);
