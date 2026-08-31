@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+
 import { RootState } from "../../store";
 import { close, remove, clear } from "../../store/reducers/cart";
 import { usePurchaseMutation } from "../../services/api";
@@ -17,6 +20,40 @@ import {
 
 type Step = "cart" | "delivery" | "payment" | "confirmation";
 
+// Esquema de Validação Yup
+const checkoutSchema = Yup.object({
+  // Entrega
+  receiver: Yup.string()
+    .min(3, "O nome deve ter pelo menos 3 caracteres")
+    .required("O campo é obrigatório"),
+  address: Yup.string()
+    .min(5, "Endereço muito curto")
+    .required("O campo é obrigatório"),
+  city: Yup.string().required("O campo é obrigatório"),
+  zipCode: Yup.string()
+    .matches(/^\d{5}-\d{3}$/, "Formato inválido (00000-000)")
+    .required("O campo é obrigatório"),
+  number: Yup.string().required("O campo é obrigatório"),
+  complement: Yup.string(),
+
+  // Pagamento
+  cardName: Yup.string()
+    .min(3, "Nome do cartão inválido")
+    .required("O campo é obrigatório"),
+  cardNumber: Yup.string()
+    .matches(/^\d{4}\s\d{4}\s\d{4}\s\d{4}$/, "Cartão inválido (16 dígitos)")
+    .required("O campo é obrigatório"),
+  cardCode: Yup.string()
+    .matches(/^\d{3,4}$/, "CVV deve ter 3 ou 4 dígitos")
+    .required("O campo é obrigatório"),
+  expiresMonth: Yup.string()
+    .matches(/^(0[1-9]|1[0-2])$/, "Mês inválido (01-12)")
+    .required("O campo é obrigatório"),
+  expiresYear: Yup.string()
+    .matches(/^\d{2}$/, "Ano inválido (Ex: 26)")
+    .required("O campo é obrigatório"),
+});
+
 export const Cart: React.FC = () => {
   const [step, setStep] = useState<Step>("cart");
   const [purchase, { isLoading, data }] = usePurchaseMutation();
@@ -24,20 +61,58 @@ export const Cart: React.FC = () => {
   const { isOpen, items } = useSelector((state: RootState) => state.cart);
   const dispatch = useDispatch();
 
-  // Form Delivery State
-  const [receiver, setReceiver] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [number, setNumber] = useState("");
-  const [complement, setComplement] = useState("");
+  // Configuração única do Formik gerenciando todo o fluxo de formulário
+  const form = useFormik({
+    initialValues: {
+      receiver: "",
+      address: "",
+      city: "",
+      zipCode: "",
+      number: "",
+      complement: "",
+      cardName: "",
+      cardNumber: "",
+      cardCode: "",
+      expiresMonth: "",
+      expiresYear: "",
+    },
+    validationSchema: checkoutSchema,
+    onSubmit: async (values) => {
+      try {
+        const res = await purchase({
+          products: items.map((item) => ({ id: item.id, price: item.preco })),
+          delivery: {
+            receiver: values.receiver,
+            address: {
+              description: values.address,
+              city: values.city,
+              zipCode: values.zipCode,
+              number: Number(values.number),
+              complement: values.complement,
+            },
+          },
+          payment: {
+            card: {
+              name: values.cardName,
+              number: values.cardNumber,
+              code: Number(values.cardCode),
+              expires: {
+                month: Number(values.expiresMonth),
+                year: Number(values.expiresYear),
+              },
+            },
+          },
+        }).unwrap();
 
-  // Form Payment State
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardCode, setCardCode] = useState("");
-  const [expiresMonth, setExpiresMonth] = useState("");
-  const [expiresYear, setExpiresYear] = useState("");
+        if (res.orderId) {
+          dispatch(clear());
+          setStep("confirmation");
+        }
+      } catch {
+        alert("Ocorreu um erro ao processar o pagamento. Verifique os dados.");
+      }
+    },
+  });
 
   if (!isOpen) return null;
 
@@ -50,47 +125,62 @@ export const Cart: React.FC = () => {
     currency: "BRL",
   });
 
-  const handleFinishPurchase = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const res = await purchase({
-        products: items.map((item) => ({ id: item.id, price: item.preco })),
-        delivery: {
-          receiver,
-          address: {
-            description: address,
-            city,
-            zipCode,
-            number: Number(number),
-            complement,
-          },
-        },
-        payment: {
-          card: {
-            name: cardName,
-            number: cardNumber,
-            code: Number(cardCode),
-            expires: {
-              month: Number(expiresMonth),
-              year: Number(expiresYear),
-            },
-          },
-        },
-      }).unwrap();
-
-      if (res.orderId) {
-        dispatch(clear());
-        setStep("confirmation");
-      }
-    } catch {
-      alert("Ocorreu um erro ao processar o pagamento. Verifique os dados.");
-    }
-  };
-
   const handleCloseAll = () => {
     dispatch(close());
     setStep("cart");
+    form.resetForm();
+  };
+
+  // Função para verificar se o campo tem erro e já foi tocado
+  const checkInputHasError = (fieldName: keyof typeof form.values) => {
+    const isTouched = form.touched[fieldName];
+    const isInvalid = form.errors[fieldName];
+    return Boolean(isTouched && isInvalid);
+  };
+
+  // Funções para formatar e aplicar máscaras nos inputs
+  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 5) {
+      value = value.replace(/^(\d{5})(\d)/, "$1-$2");
+    }
+    form.setFieldValue("zipCode", value.slice(0, 9));
+  };
+
+  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "");
+    value = value.replace(/(\d{4})(?=\d)/g, "$1 ");
+    form.setFieldValue("cardNumber", value.slice(0, 19));
+  };
+
+  const handleNumericChange = (
+    fieldName: string,
+    maxLength: number,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const value = e.target.value.replace(/\D/g, "");
+    form.setFieldValue(fieldName, value.slice(0, maxLength));
+  };
+
+  // Validação manual da etapa de Entrega antes de avançar para Pagamento
+  const handleGoToPayment = async () => {
+    form.setFieldTouched("receiver", true);
+    form.setFieldTouched("address", true);
+    form.setFieldTouched("city", true);
+    form.setFieldTouched("zipCode", true);
+    form.setFieldTouched("number", true);
+
+    const errors = await form.validateForm();
+    const hasDeliveryErrors =
+      errors.receiver ||
+      errors.address ||
+      errors.city ||
+      errors.zipCode ||
+      errors.number;
+
+    if (!hasDeliveryErrors) {
+      setStep("payment");
+    }
   };
 
   return (
@@ -142,72 +232,111 @@ export const Cart: React.FC = () => {
 
         {/* ETAPA 2: ENTREGA */}
         {step === "delivery" && (
-          <form onSubmit={() => setStep("payment")}>
+          <form onSubmit={(e) => e.preventDefault()}>
             <FormTitle>Entrega</FormTitle>
+
             <InputGroup>
               <label htmlFor="receiver">Quem irá receber</label>
               <input
                 id="receiver"
+                name="receiver"
                 type="text"
-                required
-                value={receiver}
-                onChange={(e) => setReceiver(e.target.value)}
+                value={form.values.receiver}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
               />
+              {checkInputHasError("receiver") && (
+                <small style={{ color: "#ff8282" }}>
+                  {form.errors.receiver}
+                </small>
+              )}
             </InputGroup>
+
             <InputGroup>
               <label htmlFor="address">Endereço</label>
               <input
                 id="address"
+                name="address"
                 type="text"
-                required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={form.values.address}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
               />
+              {checkInputHasError("address") && (
+                <small style={{ color: "#ff8282" }}>
+                  {form.errors.address}
+                </small>
+              )}
             </InputGroup>
+
             <InputGroup>
               <label htmlFor="city">Cidade</label>
               <input
                 id="city"
+                name="city"
                 type="text"
-                required
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+                value={form.values.city}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
               />
+              {checkInputHasError("city") && (
+                <small style={{ color: "#ff8282" }}>{form.errors.city}</small>
+              )}
             </InputGroup>
+
             <Row>
               <InputGroup>
                 <label htmlFor="zipCode">CEP</label>
                 <input
                   id="zipCode"
+                  name="zipCode"
                   type="text"
-                  required
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
+                  placeholder="00000-000"
+                  value={form.values.zipCode}
+                  onChange={handleZipCodeChange}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("zipCode") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.zipCode}
+                  </small>
+                )}
               </InputGroup>
+
               <InputGroup>
                 <label htmlFor="number">Número</label>
                 <input
                   id="number"
+                  name="number"
                   type="text"
-                  required
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
+                  value={form.values.number}
+                  onChange={(e) => handleNumericChange("number", 10, e)}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("number") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.number}
+                  </small>
+                )}
               </InputGroup>
             </Row>
+
             <InputGroup>
               <label htmlFor="complement">Complemento (opcional)</label>
               <input
                 id="complement"
+                name="complement"
                 type="text"
-                value={complement}
-                onChange={(e) => setComplement(e.target.value)}
+                value={form.values.complement}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
               />
             </InputGroup>
 
             <div style={{ marginTop: "24px" }}>
-              <Button type="submit">Continuar com o pagamento</Button>
+              <Button type="button" onClick={handleGoToPayment}>
+                Continuar com o pagamento
+              </Button>
               <Button type="button" onClick={() => setStep("cart")}>
                 Voltar para o carrinho
               </Button>
@@ -217,60 +346,99 @@ export const Cart: React.FC = () => {
 
         {/* ETAPA 3: PAGAMENTO */}
         {step === "payment" && (
-          <form onSubmit={handleFinishPurchase}>
+          <form onSubmit={form.handleSubmit}>
             <FormTitle>Pagamento - Valor a pagar {formattedTotal}</FormTitle>
+
             <InputGroup>
               <label htmlFor="cardName">Nome no cartão</label>
               <input
                 id="cardName"
+                name="cardName"
                 type="text"
-                required
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
+                value={form.values.cardName}
+                onChange={form.handleChange}
+                onBlur={form.handleBlur}
               />
+              {checkInputHasError("cardName") && (
+                <small style={{ color: "#ff8282" }}>
+                  {form.errors.cardName}
+                </small>
+              )}
             </InputGroup>
+
             <Row>
               <InputGroup maxWidth="228px">
                 <label htmlFor="cardNumber">Número do cartão</label>
                 <input
                   id="cardNumber"
+                  name="cardNumber"
                   type="text"
-                  required
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
+                  placeholder="0000 0000 0000 0000"
+                  value={form.values.cardNumber}
+                  onChange={handleCardNumberChange}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("cardNumber") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.cardNumber}
+                  </small>
+                )}
               </InputGroup>
+
               <InputGroup>
                 <label htmlFor="cardCode">CVV</label>
                 <input
                   id="cardCode"
+                  name="cardCode"
                   type="text"
-                  required
-                  value={cardCode}
-                  onChange={(e) => setCardCode(e.target.value)}
+                  placeholder="123"
+                  value={form.values.cardCode}
+                  onChange={(e) => handleNumericChange("cardCode", 4, e)}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("cardCode") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.cardCode}
+                  </small>
+                )}
               </InputGroup>
             </Row>
+
             <Row>
               <InputGroup>
                 <label htmlFor="expiresMonth">Mês de vencimento</label>
                 <input
                   id="expiresMonth"
+                  name="expiresMonth"
                   type="text"
-                  required
-                  value={expiresMonth}
-                  onChange={(e) => setExpiresMonth(e.target.value)}
+                  placeholder="MM"
+                  value={form.values.expiresMonth}
+                  onChange={(e) => handleNumericChange("expiresMonth", 2, e)}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("expiresMonth") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.expiresMonth}
+                  </small>
+                )}
               </InputGroup>
+
               <InputGroup>
                 <label htmlFor="expiresYear">Ano de vencimento</label>
                 <input
                   id="expiresYear"
+                  name="expiresYear"
                   type="text"
-                  required
-                  value={expiresYear}
-                  onChange={(e) => setExpiresYear(e.target.value)}
+                  placeholder="AA"
+                  value={form.values.expiresYear}
+                  onChange={(e) => handleNumericChange("expiresYear", 2, e)}
+                  onBlur={form.handleBlur}
                 />
+                {checkInputHasError("expiresYear") && (
+                  <small style={{ color: "#ff8282" }}>
+                    {form.errors.expiresYear}
+                  </small>
+                )}
               </InputGroup>
             </Row>
 
